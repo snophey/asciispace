@@ -10,19 +10,29 @@ end
 
 -- load resources (more love callbacks below)
 function love.load()
-  local fontsize = 32
-  font = love.graphics.newFont("unispace bd.ttf", fontsize)
-  love.graphics.setFont(font)
+  local font_filename = "unispace bd.ttf"
+
+  local font_msize = 32
+  font_m = love.graphics.newFont(font_filename, font_msize)
+
+  local font_ssize = 18
+  font_s = love.graphics.newFont(font_filename, font_ssize)
 
   screen = {
     w = love.graphics.getWidth(),
     h = love.graphics.getHeight(),
   }
 
-  player.width = font:getWidth(player.playerstr)
+  player.width = font_m:getWidth(player.playerstr)
+  player.height = font_m:getHeight()
   player.pos = {
     x = screen.w / 2,
-    y = screen.h - font:getHeight()
+    y = screen.h - font_m:getHeight()
+  }
+
+  Score.pos = {
+    x = 0,
+    y = screen.h - font_s:getHeight(),
   }
 
   love.graphics.setBackgroundColor(255, 255, 255)
@@ -43,11 +53,14 @@ player = {
   controls = {
     left = 'left',
     right = 'right',
-    shoot = 'up',
+    forward = 'up',
+    back = 'down',
+    shoot = ' ',
   }
 }
 
 function player:draw()
+  love.graphics.setFont(font_m)
   love.graphics.setColor(self.color.r, self.color.g, self.color.b)
   love.graphics.print(self.playerstr, self.pos.x, self.pos.y)
 end
@@ -62,6 +75,16 @@ function player:move(dt)
       self.pos.x = self.pos.x + self.speed * dt
     end
   end
+
+  if love.keyboard.isDown(self.controls.forward) then
+    if self.pos.y > 0 then
+      self.pos.y = self.pos.y - self.speed * dt
+    end
+  elseif love.keyboard.isDown(self.controls.back) then
+    if self.pos.y + self.height < screen.h then
+      self.pos.y = self.pos.y + self.speed * dt
+    end
+  end
 end
 
 function player:shoot()
@@ -69,8 +92,8 @@ function player:shoot()
 end
 
 Projectile = {
-  projstr = "|",
-  speed = 500,
+  projstr = ".",
+  speed = 700,
   color = {
     r = 0,
     g = 0,
@@ -91,6 +114,7 @@ function Projectile:move(dt)
 end
 
 function Projectile:draw()
+  love.graphics.setFont(font_m)
   love.graphics.setColor(self.color.r, self.color.g, self.color.b)
   love.graphics.print(self.projstr, self.pos.x, self.pos.y)
 end
@@ -107,18 +131,33 @@ function Projectile:drawProjectiles()
   end
 end
 
+Score = {
+  score = 0,
+  increment = function() return (screen.h - player.pos.y) / 10 end,
+  pos = {},
+}
+function Score:draw()
+  love.graphics.setFont(font_s)
+  local scorestr = "Score: " .. math.floor(self.score) .. " (+" .. math.floor(self.increment()) .. ")"
+  love.graphics.print(scorestr, self.pos.x, self.pos.y)
+end
+
+function Score:update(dt)
+  self.score = self.score + self.increment() * dt
+end
 
 -- love callbacks
-
 function love.draw()
   love.graphics.clear()
   player:draw()
   Projectile:drawProjectiles()
+  Score:draw()
 end
 
 function love.update(dt)
   player:move(dt)
   Projectile:moveProjectiles(dt)
+  Score:update(dt)
 end
 
 function love.keypressed(key)
